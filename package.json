@@ -1,0 +1,18 @@
+{
+  "name": "future-timeline-simulator",
+  "version": "1.0.0",
+  "scripts": {
+    "render": "remotion render src/index.ts MyVideo out.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "remotion": "^4.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.4.5"
+  }
+}
