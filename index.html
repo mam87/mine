@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>متابعة المهام — Formalin Detector</title>
+<title>Task Manager — متابعة المهام</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
 /* ===== VARIABLES ===== */
@@ -458,11 +458,11 @@ tbody td:last-child {
 </head>
 <body>
 
-<!-- HEADER -->
+<!-- HEADER – تم تغيير العناوين إلى Task Manager -->
 <div class="header">
-  <h1>متابعة المهام</h1>
-  <div class="subtitle">Task Follow-up — Formalin Detector Project</div>
-  <span class="tag">FORMALIN DETECTOR</span>
+  <h1>📋 Task Manager</h1>
+  <div class="subtitle">متابعة المهام — إدارة المشاريع بذكاء</div>
+  <span class="tag">TASK MANAGER</span>
 </div>
 
 <!-- STATS -->
@@ -505,6 +505,7 @@ tbody td:last-child {
   <div class="toolbar-right">
     <button class="btn btn-primary" onclick="openModal()">＋ مهمة جديدة</button>
     <button class="btn btn-print" onclick="window.print()">🖨️ طباعة</button>
+    <button class="btn btn-ghost" onclick="resetAndBackup()" title="إعادة تحميل البيانات من التخزين">⟳ استعادة</button>
   </div>
 </div>
 
@@ -532,7 +533,7 @@ tbody td:last-child {
   </div>
 </div>
 
-<div class="footer">آخر تحديث: <span id="dateNow"></span></div>
+<div class="footer">آخر تحديث: <span id="dateNow"></span> · حفظ تلقائي في المتصفح ✓</div>
 
 <!-- ADD / EDIT MODAL -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
@@ -579,20 +580,68 @@ tbody td:last-child {
 
 <script>
 /* ===========================
-   DATA
+   DATA + LOCALSTORAGE (حفظ تلقائي لكل إجراء)
 =========================== */
-let tasks = [
-  { id:1, title:"إجتماع مع مرحلة بهواء وشغل (حماية)",    note:"إسبرام + بسرعة + الجودة + ديسبنسر", priority:"high", status:"pending",   remarks:"" },
-  { id:2, title:"عطاء غطاء — Slide → Printer",             note:"هيثم",                               priority:"med",  status:"pending",   remarks:"" },
-  { id:3, title:"عطاء غطاء — Cassette-Printer",            note:"هيثم",                               priority:"med",  status:"pending",   remarks:"" },
-  { id:4, title:"عطاء غطاء الكواسفة / هيم الوصي",         note:"",                                   priority:"med",  status:"pending",   remarks:"" },
-  { id:5, title:"عطاء مواد — Dispenser + Forceps",         note:"",                                   priority:"high", status:"pending",   remarks:"" },
-  { id:6, title:"جرد مواد أمسكي",                          note:"",                                   priority:"low",  status:"pending",   remarks:"" },
-  { id:7, title:"عطاء — External Control ← م كـ بنار",    note:"",                                   priority:"high", status:"pending",   remarks:"" },
-  { id:8, title:"عطاء الـ Masks",                          note:"",                                   priority:"low",  status:"cancelled", remarks:"تم إلغاؤه" }
-];
-let nextId = 9;
+let tasks = [];
+let nextId = 1;
 let editingIdx = null;
+
+// تحميل البيانات من localStorage أو البيانات الافتراضية
+function loadFromStorage() {
+  const stored = localStorage.getItem('taskManagerData');
+  if (stored) {
+    try {
+      tasks = JSON.parse(stored);
+      if (tasks.length) {
+        nextId = Math.max(...tasks.map(t => t.id), 0) + 1;
+      } else {
+        nextId = 1;
+      }
+    } catch(e) { console.warn(e); setDefaultTasks(); }
+  } else {
+    setDefaultTasks();
+  }
+}
+
+function setDefaultTasks() {
+  tasks = [
+    { id:1, title:"إجتماع مع مرحلة بهواء وشغل (حماية)",    note:"إسبرام + بسرعة + الجودة + ديسبنسر", priority:"high", status:"pending",   remarks:"" },
+    { id:2, title:"عطاء غطاء — Slide → Printer",             note:"هيثم",                               priority:"med",  status:"pending",   remarks:"" },
+    { id:3, title:"عطاء غطاء — Cassette-Printer",            note:"هيثم",                               priority:"med",  status:"pending",   remarks:"" },
+    { id:4, title:"عطاء غطاء الكواسفة / هيم الوصي",         note:"",                                   priority:"med",  status:"pending",   remarks:"" },
+    { id:5, title:"عطاء مواد — Dispenser + Forceps",         note:"",                                   priority:"high", status:"pending",   remarks:"" },
+    { id:6, title:"جرد مواد أمسكي",                          note:"",                                   priority:"low",  status:"pending",   remarks:"" },
+    { id:7, title:"عطاء — External Control ← م كـ بنار",    note:"",                                   priority:"high", status:"pending",   remarks:"" },
+    { id:8, title:"عطاء الـ Masks",                          note:"",                                   priority:"low",  status:"cancelled", remarks:"تم إلغاؤه" }
+  ];
+  nextId = 9;
+}
+
+// حفظ البيانات في localStorage
+function saveToLocalStorage() {
+  localStorage.setItem('taskManagerData', JSON.stringify(tasks));
+  updateStats();    // تحديث الإحصائيات مع كل حفظ
+  document.getElementById('dateNow').textContent =
+    new Date().toLocaleDateString('ar-EG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+
+// دالة مركزية لتحديث مهمة معينة ثم حفظ وعرض
+function updateTaskAndRender(index, newProps) {
+  if (index !== undefined && tasks[index]) {
+    Object.assign(tasks[index], newProps);
+    saveToLocalStorage();
+    render();
+  }
+}
+
+// إعادة تعيين البيانات من localStorage الافتراضي (يمكن استخدامها لاستعادة)
+function resetAndBackup() {
+  if (confirm("سيتم استعادة البيانات المحفوظة في المتصفح (آخر حفظ). هل ترغب بالمتابعة؟")) {
+    loadFromStorage();
+    saveToLocalStorage();
+    render();
+  }
+}
 
 const priorityMap = {
   high: { label:"🔴 عالية",     cls:"p-high" },
@@ -607,7 +656,7 @@ const statusMap = {
 };
 
 /* ===========================
-   RENDER
+   RENDER (مع ربط أحداث التعديل المباشر بحفظ فوري)
 =========================== */
 function render() {
   const q  = document.getElementById('searchBox').value.trim().toLowerCase();
@@ -625,52 +674,61 @@ function render() {
     visible++;
 
     const s = statusMap[task.status];
-    const p = priorityMap[task.priority];
     const tr = document.createElement('tr');
     tr.style.animation = 'rowIn 0.3s ease both';
     tr.style.animationDelay = (visible * 0.04) + 's';
+    
+    // إنشاء الحقول مع ربط onchange مباشر يحفظ و يعيد التصيير لضمان التحديث المتزامن
     tr.innerHTML = `
       <td><div class="task-num">${task.id}</div></td>
       <td style="min-width:200px">
         <input class="inline-edit" value="${esc(task.title)}" placeholder="عنوان المهمة"
-          onchange="tasks[${i}].title=this.value" >
+          onchange="updateField(${i}, 'title', this.value)" >
         <input class="inline-note" value="${esc(task.note)}"  placeholder="وصف اختياري..."
-          onchange="tasks[${i}].note=this.value" >
-      </td>
-      <td>
-        <select class="priority-select" onchange="tasks[${i}].priority=this.value;updateStats()">
+          onchange="updateField(${i}, 'note', this.value)" >
+       </td>
+       <td>
+        <select class="priority-select" onchange="updateField(${i}, 'priority', this.value)">
           <option value="high" ${task.priority==='high'?'selected':''}>🔴 عالية</option>
           <option value="med"  ${task.priority==='med' ?'selected':''}>🟡 متوسطة</option>
           <option value="low"  ${task.priority==='low' ?'selected':''}>🟢 منخفضة</option>
         </select>
-      </td>
-      <td>
+       </td>
+       <td>
         <div class="badge ${s.cls}">
-          <select class="status-select" onchange="changeStatus(${i},this.value)">
+          <select class="status-select" onchange="updateField(${i}, 'status', this.value)">
             <option value="pending"   ${task.status==='pending'  ?'selected':''}>قيد الانتظار</option>
             <option value="inprog"    ${task.status==='inprog'   ?'selected':''}>جارٍ</option>
             <option value="done"      ${task.status==='done'     ?'selected':''}>مكتمل ✓</option>
             <option value="cancelled" ${task.status==='cancelled'?'selected':''}>ملغى</option>
           </select>
         </div>
-      </td>
-      <td>
+       </td>
+       <td>
         <input class="inline-note" style="font-size:0.82rem;color:var(--text)"
           value="${esc(task.remarks)}" placeholder="أضف ملاحظة متابعة..."
-          onchange="tasks[${i}].remarks=this.value">
-      </td>
-      <td>
+          onchange="updateField(${i}, 'remarks', this.value)">
+       </td>
+       <td>
         <div class="action-btns">
           <button class="icon-btn" title="تحرير" onclick="openModal(${i})">✏️</button>
           <button class="icon-btn del" title="حذف" onclick="deleteTask(${i})">🗑</button>
         </div>
-      </td>
+       </td>
     `;
     tbody.appendChild(tr);
   });
 
   document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
-  updateStats();
+  updateStats(); // إحصائيات بعد كل عرض
+}
+
+// دالة مساعدة لتحديث حقل معين وإعادة التصيير والحفظ
+function updateField(idx, field, value) {
+  if (!tasks[idx]) return;
+  tasks[idx][field] = value;
+  saveToLocalStorage();   // حفظ فوري لكل تغيير
+  render();               // إعادة التصيير لضمان تناسق البيانات والفلاتر
 }
 
 function esc(s) {
@@ -695,17 +753,12 @@ function updateStats() {
 }
 
 /* ===========================
-   ACTIONS
+   ACTIONS (حذف، فلتر)
 =========================== */
-function changeStatus(idx, val) {
-  tasks[idx].status = val;
-  updateStats();
-  render();
-}
-
 function deleteTask(idx) {
-  if (!confirm('هل تريد حذف هذه المهمة؟')) return;
+  if (!confirm('هل تريد حذف هذه المهمة نهائياً؟')) return;
   tasks.splice(idx, 1);
+  saveToLocalStorage();
   render();
 }
 
@@ -714,7 +767,7 @@ function applyFilter() { render(); }
 document.getElementById('searchBox').addEventListener('input', render);
 
 /* ===========================
-   MODAL
+   MODAL (إضافة / تعديل)
 =========================== */
 function openModal(idx = null) {
   editingIdx = idx;
@@ -764,6 +817,7 @@ function saveTask() {
   } else {
     tasks.push(obj);
   }
+  saveToLocalStorage();
   closeModal();
   render();
 }
@@ -777,10 +831,11 @@ document.addEventListener('keydown', e => {
 /* ===========================
    INIT
 =========================== */
+loadFromStorage();
+saveToLocalStorage();   // مزامنة أولية للتأكد من وجود البيانات في localStorage
 document.getElementById('dateNow').textContent =
   new Date().toLocaleDateString('ar-EG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-
 render();
 </script>
 </body>
-</html>
+  </html>
